@@ -1,0 +1,23 @@
+# -*- coding: utf-8 -*-
+'''
+Задание 7.3b
+
+Сделать копию скрипта задания 7.3a.
+
+Дополнить скрипт:
+- Запросить у пользователя ввод номера VLAN.
+- Выводить информацию только по указанному VLAN.
+
+Ограничение: Все задания надо выполнять используя только пройденные темы.
+
+'''
+# Заппросим номер VLAN у пользователя
+VLAN = input('Type the VLAN number, please: ')
+
+# Работаем с файлом конструкцией with
+
+with open('CAM_table.txt', 'r') as File:
+	for Line in File:
+		List = Line.rstrip().split()
+		if  (List and List[0].isdigit() and List[0] == VLAN):
+			print(Line.rstrip())
