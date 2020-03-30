@@ -45,7 +45,7 @@ def convert_config_to_dict(config_filename):
         for line in file:
 		# Проверяем, что в строке нет слова из списка ignore и она не начинается с '!'
             if (ignore_command(line, ignore) or line.startswith('!')):
-#           С командой pass не работает, берём continue
+                # С командой pass будет пропущен весь блок if-elif-else, берём continue
                 continue
             elif (line[0] != ' '):
 # Если строка не начинается с пробела, значит это команда верхнего уровня.
