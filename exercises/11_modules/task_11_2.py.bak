@@ -1,0 +1,99 @@
+# -*- coding: utf-8 -*-
+'''
+Задание 11.2
+
+Создать функцию create_network_map, которая обрабатывает
+вывод команды show cdp neighbors из нескольких файлов и объединяет его в одну общую топологию.
+
+У функции должен быть один параметр filenames, который ожидает как аргумент список с именами файлов,
+в которых находится вывод команды show cdp neighbors.
+
+Функция должна возвращать словарь, который описывает соединения между устройствами.
+Структура словаря такая же, как в задании 11.1:
+    {('R4', 'Fa0/1'): ('R5', 'Fa0/1'),
+     ('R4', 'Fa0/2'): ('R6', 'Fa0/0')}
+
+
+Cгенерировать топологию, которая соответствует выводу из файлов:
+* sh_cdp_n_sw1.txt
+* sh_cdp_n_r1.txt
+* sh_cdp_n_r2.txt
+* sh_cdp_n_r3.txt
+
+В словаре, который возвращает функция create_network_map, не должно быть дублей.
+
+С помощью функции draw_topology из файла draw_network_graph.py нарисовать схему на основании топологии,
+полученной с помощью функции create_network_map.
+Результат должен выглядеть так же, как схема в файле task_11_2a_topology.svg
+
+
+При этом:
+* Расположение устройств на схеме может быть другим
+* Соединения должны соответствовать схеме
+
+Не копировать код функций parse_cdp_neighbors и draw_topology.
+
+Ограничение: Все задания надо выполнять используя только пройденные темы.
+
+> Для выполнения этого задания, должен быть установлен graphviz:
+> apt-get install graphviz
+
+> И модуль python для работы с graphviz:
+> pip install graphviz (внутри виртуального окружения именно так, без sudo!!)
+
+'''
+# Импортируем функцию draw_topology
+from draw_network_graph import draw_topology
+# Создаём функцию
+def create_network_map(filenames):
+# Создаём словарь
+    result_right = {}
+    result_left = {}
+    for item in filenames:
+        file = open(item, 'r')
+# Убираем из полученой строки слева и справа '\n'.
+# Или потом это придётся делать для local_host и neighbors
+        command = file.read()
+        command = command.strip()
+# В local_host запишем имя нашего устройста. Оно будет перед '>' или '#'
+# Здесь мы ищем только позицию '>' и делаем срез строки
+        local_host = command[0:command.find('>')]
+#    local_host.strip()
+# В neighbors запишем только вывод соседей.
+# Для этого ноходим номер позиции элемента 'ID\n', добавляем к нему 3
+# и делаем срез строки начиная с полученной позиции.
+# Срез начнётся с имени первого соседа
+        neighbors = command[command.find('ID\n') + 3 ::]
+# Преобразуем строку в список. Элементы разделяем по '\n'
+        neighbors = neighbors.split('\n')
+# В neighbors теперь список строк и каждая описывает конкретного соседа
+# Дальше проходим по списку, каждую строку тоже преобразуем в список, но уже разделитель пробел
+# и распаковываем переменные. Три слева и два справа: сосед, наш интерфейс, его номер,
+# интерфейс соседа, его номер, объединяем имена интерфейсов с их номерами
+# и, наконец, записываем всё в словарь.
+        for line in neighbors:
+            line = line.split()
+            r_host, l_intf, l_intf_num, *other, r_intf, r_intf_num = line
+            r_intf = r_intf + r_intf_num
+            l_intf = l_intf + l_intf_num
+            result_right[local_host, l_intf] = r_host, r_intf
+            result_left[r_host, r_intf] = local_host, l_intf
+            for key in result_left:
+                if result_right[local_host, l_intf] == result_left[key]:
+                    del(result_right[local_host, l_intf])
+                    break
+
+#    print(result_right)
+#    print('=' * 81)
+#    print(result_left)
+    return(result_right)
+
+# Список с именами файлов
+file_list = ['sh_cdp_n_sw1.txt', 'sh_cdp_n_r1.txt', 'sh_cdp_n_r2.txt', 'sh_cdp_n_r3.txt']
+# Вызываем функцию. Принимаем результат в topology_dict
+topology_dict = create_network_map(file_list)
+# Рисуем схему
+draw_topology(topology_dict)
+#print(create_network_map(file_list))
+#print(topology_dict)
+
