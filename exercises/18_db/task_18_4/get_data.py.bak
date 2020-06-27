@@ -1,0 +1,85 @@
+import sqlite3
+#from pprint import pprint
+import sys
+from tabulate import tabulate
+
+def check_args(parametars):
+    '''
+    Функция проверяет переданные аргументы и возвращает SQL запрос
+    '''
+    if len(parametars) == 0:
+
+        query_a = 'SELECT * FROM dhcp WHERE active = 1'
+        query_p = 'SELECT * FROM dhcp WHERE active = 0'
+
+    elif len(parametars) == 2:
+
+        key, value = parametars
+
+        keys = ['mac', 'ip', 'vlan', 'interface', 'switch']
+
+        try:
+
+            keys.remove(key)
+
+        except ValueError:
+
+            print('Параметр "{}" не поддерживается'.format(key))
+
+            print('Допустимые параметры: {}'.format(', '.join(keys)))
+
+            sys.exit('!')
+		
+        query_a = 'SELECT * FROM dhcp WHERE {} = "{}" AND active = 1'.format(key, value)
+        query_p = 'SELECT * FROM dhcp WHERE {} = "{}" AND active = 0'.format(key, value)
+
+    else:
+
+        sys.exit('Пожалуйста, укажите либо два аргумента, либо ни одного.')
+
+    return(query_a, query_p)
+
+#------------------------------------------------------------------------------------------
+#Получаем параметры, распакуем переменные
+#в first попадёт имя нашего файла, в parametars всё остальное
+first, *parametars = sys.argv[0:]
+
+db_filename = 'dhcp_snooping.db'
+
+#Отправляем параметры функции, забираем sql запрос
+query_a, query_p = check_args(parametars)
+
+conn = sqlite3.connect(db_filename)
+cursor = conn.cursor()
+
+#В result попадёт итератор
+cursor.execute(query_a)
+result_a = cursor.fetchall()
+cursor.execute(query_p)
+result_p = cursor.fetchall()
+
+#Если parametars не пуст, укажем какой получился фильтр вывода
+#Правильность параметров уже проверили функцией check_args()
+if parametars:
+
+    print('\nИнформация об устройствах с таким значением {}: {}'.format(parametars[0], parametars[1]))
+
+    print('\nАктивные записи:\n')
+    print(tabulate(result_a))
+
+    if result_p:
+#        print(result_p)
+        print('\nНеактивные записи:\n')
+        print(tabulate(result_p))
+
+
+else:
+
+    print('\nАктивные записи:\n')
+    print(tabulate(result_a))
+
+    if result_p:
+        print('\nНеактивные записи:\n')
+        print(tabulate(result_p))
+
+conn.close()
