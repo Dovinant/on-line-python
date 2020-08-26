@@ -52,55 +52,6 @@ def read_yaml(yaml_file):
 
 #------------------------------------------------------------------------------------------
 
-def read_dhcp_snooping(dhcp_sng_files):
-    '''
-    Функция считывает файлы вывода команды sh ip dhcp snooping binding
-    Функция возвращает список котежей
-    '''
-#Создаём регулярное выражение. В первую группу попадёт mac, во вторую IP, в третью vlan, в четвёртую interface
-    regex = re.compile('(\S+) +(\S+) +\d+ +\S+ +(\d+) +(\S+)')
-
-    result = []
-
-#Функция получает список файлов. Проходим по списку, открываем каждый файл, считываем его построчно в line,
-#и применяем скомпилированное регулярное выражение. Функция search() вернёт все найденные группы в виде итератора
-
-    for filename in dhcp_sng_files:
-	
-#Имя коммутатора получим из имени переданного нам файла
-#метод os.path.basename() вернёт имя файла без пути к нему
-        host = os.path.basename(filename)
-		
-#Делаем срез до символа '_'
-#line = 'sw1_dhcp_snooping.txt'
-#line[:line.find('_')] вернёт 'sw1'
-        host = host[:host.find('_')]
-	
-        with open(filename) as f:
-
-            for line in f:
-			
-#Ищем информацию в очередной строке файла
-                match = regex.search(line)
-
-#Если нашли, match.groups() вернёт кортеж из значений попавших в группы
-#Кортеж преобразуем в список, в список добавим имя хоста и еднинцу для поля active
-#превратим список обратно в кортеж и добавим всё это в result
-                if match:
-
-                    tuple_list = list(match.groups())
-
-                    tuple_list.append(host)
-
-                    tuple_list.append(1)
-
-                    result.append(tuple(tuple_list))
-
-#result - это список кортежей			
-    return(result)
-	
-#------------------------------------------------------------------------------------------
-
 def create_db(db_name, db_schema):
     '''
     На основе переданной схемы
@@ -162,31 +113,10 @@ def add_data_switches(db_file, yaml_file):
 def add_data(db_file, filename):
     '''
     Функция добавляет данные в таблицу dhcp.
-    Аргументы имя БД и список файлов содержащих вывод команды.
-    Эта функция с помощью функцию read_dhcp_snooping() получает данные для записи.
     '''
 #Проверяем, что БД существует
     check_db_file_exists(db_file)
-
-#Запоминаем данные для записи в таблицу dhcp
-    dhcp_data = read_dhcp_snooping(filename)
-
-    conn = sqlite3.connect(db_file)
-
-#Во всех записях поле active выставим в 0
-#У новых данных в этом поле окажется единица см. функцию read_dhcp_snooping()
-#У старых, т.е. не активных, останется ноль
-    conn.execute('UPDATE dhcp SET active = 0')
-
-#Обрабатывать каждую строку нам не надо, поэтому применим executemany()
-    with conn:
-
-#Просто добавили datetime('now'), вот и всё!	
-        query = "INSERT OR REPLACE INTO dhcp VALUES (?, ?, ?, ?, ?, ?, datetime('now'))"
-		
-        conn.executemany(query, dhcp_data)
-		
-    conn.close()
+    print(db_file, filename)
 
 #------------------------------------------------------------------------------------------
 
