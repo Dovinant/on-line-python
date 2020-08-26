@@ -2,7 +2,8 @@
 """
 Задание 20.4
 
-Создать функцию send_commands_to_devices, которая отправляет команду show или config на разные устройства в параллельных потоках, а затем записывает вывод команд в файл.
+Создать функцию send_commands_to_devices, которая отправляет команду show или config на разные устройства в параллельных потоках,
+а затем записывает вывод команд в файл.
 
 Параметры функции:
 * devices - список словарей с параметрами подключения к устройствам
@@ -86,3 +87,89 @@ R3#
 
 Для выполнения задания можно создавать любые дополнительные функции.
 """
+#Импортируем модули
+import yaml
+from netmiko import ConnectHandler
+from concurrent.futures import ThreadPoolExecutor, as_completed
+#from itertools import repeat
+from pprint import pprint
+#--------------------------------------------------------------------------------------
+def send_command(device, command, flag):
+    '''
+    Функция подключается по telnet к устройствам определённым в device
+    и предаёт им command
+    Если команда show переменная flag должна быть False
+    '''
+    with ConnectHandler(**device) as telnet:
+
+        telnet.enable()
+
+#strip_command - удалить саму команду из вывода (по умолчанию True)
+#enter_config_mode - входить ли в конфигурационный режим (по умолчанию True)
+        result = telnet.send_config_set(command, strip_command=False, enter_config_mode=flag)
+        
+#Убираем лишнее приглашение устройства -
+#делаем срез до найденного приглашения
+        result = result[0:result.find(telnet.find_prompt())]
+        
+#Формируем итоговый результат. У нас уже есть команда и вывод, добавим в начало приглашение.        
+#find_prompt - возвращает текущее приглашение устройства
+        result = telnet.find_prompt() + result
+
+        telnet.disconnect()
+
+        return(result)
+#--------------------------------------------------------------------------------------
+#Создадим функцию
+def send_commands_to_devices(devices, filename, show=None, config=None, limit=3):
+#Предполагаем, что передаётся либо команда show, либо команда конфигурации, если и та и другая передана будет только show
+#Если show, то flag=False, функция send_command не переводит устройство
+#в конфигурационный режим
+    flag = True
+
+    command = config
+
+    if show:
+
+        command = show
+
+        flag = False
+
+    f = open(filename, 'w')
+
+    with ThreadPoolExecutor(max_workers=limit) as executor:
+
+        future_list = []
+
+        for device in devices:
+
+            future = executor.submit(send_command, device, command, flag)
+
+            future_list.append(future)
+
+        for item in as_completed(future_list):
+
+            f.write(item.result())
+
+#            print(f.result())
+    f.close()
+#--------------------------------------------------------------------------------------
+if __name__ == '__main__':
+
+#Определяем переменные
+    yaml_file = 'unl_devices.yml'
+    filename = 'log.txt'
+    config=['router ospf 55', 'network 0.0.0.0 255.255.255.255 area 0']
+#    config='logging 10.5.5.5'
+    show='sh clock'
+	
+#Читаем yaml файл, составляем список словарей
+    with open(yaml_file) as f:
+
+        devices = yaml.safe_load(f)
+
+#Вызываем функцию
+#    send_commands_to_devices(devices, show=show, config=config, filename=filename)
+    send_commands_to_devices(devices, config=config, filename=filename)
+#    send_commands_to_devices(devices, show=show, filename=filename)
+
