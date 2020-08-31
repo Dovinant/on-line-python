@@ -1,0 +1,3 @@
+Q. Gitlab запрашивает пароль
+Проблема: не работает git push/pull при работе через ssh ключ.
+A. https://rtfm.wiki/linux/gitlab_password_ssh
