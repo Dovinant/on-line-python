@@ -38,7 +38,7 @@ def ping_one_ip_only(ip_addr):
     reply = subprocess.run(['ping', '-c', '2', '-n', ip_addr],
                 stdout=subprocess.DEVNULL)
 
-    return(reply.returncode)
+    return reply.returncode
 #--------------------------------------------------------------------------------------
 #Создадим функцию
 def ping_ip_addresses(ip_list, limit=3):
